@@ -1,5 +1,7 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnDestroy, OnInit } from "@angular/core";
 import { IProduct } from "./product";
+import { ProductService } from "./product.service";
+import { Subscription } from "rxjs/internal/Subscription";
 
 @Component ({
     selector: 'pm-products',
@@ -7,11 +9,13 @@ import { IProduct } from "./product";
     styleUrls: ['./product-list.component.css']
 })
 
-export class ProductListComponent implements OnInit {
+export class ProductListComponent implements OnInit, OnDestroy {
     pageTitle: string = 'Product List';
     imageWidth: number = 50;
     imageMargin: number = 2;
     showImage: boolean = false;
+    errorMessage: string = '';
+    sub!: Subscription;
 
     private _listFilter: string = ''
     get listFilter() : string {
@@ -25,35 +29,26 @@ export class ProductListComponent implements OnInit {
     }
 
     filteredProducts: IProduct[] = [];
-    products: IProduct[] = [
-        {
-            "productId": 1,
-            "productName": "Garedn Cart",
-            "productCode": "GDN-0023",
-            "releaseDate": "March 18, 2021",
-            "description": "15 gallon capacity rolling graden cart",
-            "price": 32.99,
-            "starRating": 4.2,
-            "imageUrl": "assets/images/garden_cart.png"
-        },
-        {
-            "productId": 2,
-            "productName": "Hammer",
-            "productCode": "TBX-0048",
-            "releaseDate": "March 21, 2021",
-            "description": "Curved claw steel hammer",
-            "price": 8.9,
-            "starRating": 2.8,
-            "imageUrl": "assets/images/hammer.png"
-        }
-    ];
+    products: IProduct[] = [];
+
+    constructor(private productService: ProductService) {}
 
     toggleImage(): void {
         this.showImage = !this.showImage;
     }
 
     ngOnInit(): void {
-        this.listFilter = 'cart';
+        this.sub = this.productService.getProducts().subscribe({
+            next: products => {
+                this.products = products;
+                this.filteredProducts = this.products;
+            },
+            error: err => this.errorMessage = err
+        });
+    }
+
+    ngOnDestroy(): void {
+        this.sub.unsubscribe();
     }
 
     performFilter(filterBy: string): IProduct[] {
